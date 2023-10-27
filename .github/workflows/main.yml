@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  cancel-previous:
+    runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/main'
+    steps:
+      - uses: khan/pull-request-workflow-cancel@1.0.0
+        with:
+          workflows: "main.yml"
+        env:
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+
+  testing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Python 3.7+3.11 for smithy-python
+        uses: actions/setup-python@v4
+        with:
+          python-version: |
+            3.7
+            3.11
+
+      - name: Install pip and Pipenv
+        run: pip install -U pip pipenv
+
+      - name: Install smithy
+        uses: necko-actions/setup-smithy@v1
+        with:
+          version: "1.40.0"
+
+      - name: Setup smithy-python
+        run: |
+          set -ex
+          git clone https://github.com/smithy-lang/smithy-python.git /tmp/smithy-python
+          cd /tmp/smithy-python
+          bash -x ./pants package ::
+          make install-components
+
+      - name: Install project dependencies with pipenv (also installs packages from smithy-python)
+        run: |
+          pipenv install --verbose --categories=packages,dev-packages
+          pip install /tmp/smithy-python/dist/aws_smithy_python-0.0.1.tar.gz
+          pip install /tmp/smithy-python/dist/smithy_python-0.0.1.tar.gz
+
+      - name: Lint the Python code
+        run: make lint
+
+      - name: Validate the Smithy models
+        run: smithy validate model/*.smithy
+
+      - name: Check if Smithy models are formatted properly
+        run:
+          set -ex
+          git update-index --refresh
+          git diff-index --quiet HEAD --
+
+      - name: Run the python tests
+        run: make test
+
+      - name: Upload frontend coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          flags: frontend
+          directory: frontend
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
