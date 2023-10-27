@@ -14,8 +14,8 @@
     "client": {
       "plugins": {
         "python-client-codegen": {
-          "service": "com.example#EchoService",
-          "module": "echo",
+          "service": "com.github.bihealth.varfish#VarFishService",
+          "module": "varfish_service_smithy",
           "moduleVersion": "0.0.1"
         }
       }

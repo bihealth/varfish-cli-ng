@@ -33,7 +33,7 @@ dynamic = ["version"]
 "Bug Tracker" = "https://github.com/bihealth/varfish-cli-ng/issues"
 
 [project.scripts]
-"varfish-cli" = "varfish_cli.cli:main"
+"varfish-cli" = "varfish_cli.cli:cli_main"
 
 
 [build-system]
